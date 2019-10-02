@@ -1,0 +1,411 @@
+\documentclass{tufte-book}
+\usepackage{graphicx}  % werken met figuren
+\usepackage{gensymb} % werken met wetenschappelijke eenheden\usepackage{geometry}
+\usepackage{changepage} % http://ctan.org/pkg/changepage
+\usepackage[dutch,british]{babel} % instelling van de taal (woordsplitsing, spellingscontrole)
+\usepackage[parfill]{parskip} % Paragrafen gescheiden door witte lijn en geen inspringing
+\usepackage[font=small,skip=3pt]{caption} % Minder ruimte tussen figuur/table en ondertitel. Ondertitel klein
+\usepackage{capt-of}
+\usepackage{indentfirst}
+\setlength{\parindent}{0.7cm}
+\usepackage{enumitem} % Laat enumerate werken met letters
+\usepackage{url}
+\usepackage{lipsum}
+\setkeys{Gin}{width=\linewidth,totalheight=\textheight,keepaspectratio}
+% Prints a trailing space in a smart way.
+\usepackage{xspace}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\DeclareGraphicsExtensions{.pdf,.png,.jpg}
+
+% Alter some LaTeX defaults for better treatment of figures:
+% See p.105 of "TeX Unbound" for suggested values.
+% See pp. 199-200 of Lamport's "LaTeX" book for details.
+%   General parameters, for ALL pages:
+    \renewcommand{\topfraction}{0.9}	% max fraction of floats at top
+    \renewcommand{\bottomfraction}{0.9}	% max fraction of floats at bottom
+%   Parameters for TEXT pages (not float pages):
+    \setcounter{topnumber}{2}
+    \setcounter{bottomnumber}{2}
+    \setcounter{totalnumber}{4}     % 2 may work better
+    \renewcommand{\textfraction}{0.1}	% allow minimal text w. figs
+%   Parameters for FLOAT pages (not text pages):
+    \renewcommand{\floatpagefraction}{0.8}	% require fuller float pages
+% N.B.: floatpagefraction MUST be less than topfraction !!
+\setcounter{secnumdepth}{3}
+
+\newcommand{\tthdump}[1]{#1}
+
+\newcommand{\openepigraph}[2]{
+  \begin{fullwidth}
+  \sffamily\large
+    \begin{doublespace}
+      \noindent\allcaps{#1}\\ % epigraph
+      \noindent\allcaps{#2} % author
+    \end{doublespace}
+  \end{fullwidth}
+}
+
+
+\usepackage{makeidx}
+\makeindex
+
+\title{Forecasting Principles and Practice - Hyndman and Athanasopoulos}
+\author{Jan Trommelmans}
+
+\begin{document}
+\SweaveOpts{concordance=TRUE,prefix.string=FPP2}
+\setkeys{Gin}{width=1.1\marginparwidth} %% Sweave
+
+<<echo=FALSE>>=
+library(fpp2)
+library(tidyverse)
+library(lubridate)
+library(zoo)
+library(broom)
+library(forecast)
+library(gridExtra)
+library(quantmod)
+library(RColorBrewer)
+library(GGally)
+@
+
+% Setting the ggplot theme:
+<<echo=FALSE>>=
+JT.theme <- theme(panel.border = element_rect(fill = NA, colour = "gray10"),
+                  panel.background = element_blank(),
+                  panel.grid.major = element_line(colour = "gray85"),
+                  panel.grid.minor = element_line(colour = "gray85"),
+                  panel.grid.major.x = element_line(colour = "gray85"),
+                  axis.text = element_text(size = 8 , face = "bold"),
+                  axis.title = element_text(size = 9 , face = "bold"),
+                  plot.title = element_text(size = 12 , face = "bold"),
+                  strip.text = element_text(size = 8 , face = "bold"),
+                  strip.background = element_rect(colour = "black"),
+                  legend.text = element_text(size = 8),
+                  legend.title = element_text(size = 9 , face = "bold"),
+                  legend.background = element_rect(fill = "white"),
+                  legend.key = element_rect(fill = "white"))
+@
+
+% Setting the color palette
+<<echo=FALSE>>=
+tint <- brewer.pal(8, "Dark2")
+@
+
+% Functions
+
+\frontmatter
+\chapter*{Forecasting Principles and Practice}
+
+\mainmatter
+
+\chapter{Getting Started}
+
+\section{What can be forecast?}
+
+\section{Forecasting, planning and goals}
+
+\section{Determining what to forecast}
+
+\section{Forecasting data and methods}
+
+\section{Some case studies}
+
+\section{The basic steps in a forecasting task}
+
+\section{The statistical forecasting perspective}
+
+\section{Exercises}
+
+\section{Further reading}
+
+\chapter{Time series graphics}
+
+I use the \textit{gas\_price} data set, we use(d) for the forecasting of gasoline price if Nairobi (Kenya) for November 2019. These prices are in Kenyan Shilling (KSH) per liter. The data has already been checked, missing values and missing rows were corrected.
+
+<<>>=
+load("gas_price.Rdata")
+@
+
+\section{ts objects}
+
+The data set starts in Januari 2005 and is monthly.
+
+<<>>=
+gas_price_ts <- ts(gas_price, start =c(2005, 1), frequency = 12)
+@
+
+\section{Time plots}
+
+<<label=timeplot, fig=TRUE, include=FALSE, echo=FALSE>>=
+autoplot(gas_price_ts[,"value"], col = tint[1]) +
+  ggtitle("View of the time series") +
+  xlab("monthly date") +
+  ylab("value") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-timeplot}
+\caption{ }
+\label{fig:timeplot}
+\setfloatalignment{b}
+\end{marginfigure}
+
+\section{Time series patterns}
+
+\begin{itemize}
+	\item trend: long term evolution (can be non linear)
+	\item seasonal: rise and fall with fixed period(s)
+	\item cyclic: rise and fall but with no fixed period
+\end{itemize}
+
+
+\section{Seasonal plots}
+
+<<label=seasonplot, fig=TRUE, include=FALSE, echo=FALSE>>=
+ggseasonplot(gas_price_ts[,"value"]) +
+  ggtitle("Seasonal plot: view per year") +
+  xlab("monthly date") +
+  ylab("value") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-seasonplot}
+\caption{ }
+\label{fig:seasonplot}
+\setfloatalignment{b}
+\end{marginfigure}
+
+Figure~\ref{fig:seasonplot} does not show a fixed seasonal trend that is the same every year.
+
+\section{Seasonal subseries plots}
+
+<<label=seasonsubplot, fig=TRUE, include=FALSE, echo=FALSE>>=
+ggsubseriesplot(gas_price_ts[,"value"]) +
+  ggtitle("Seasonal plot: view per month") +
+  xlab("monthly date") +
+  ylab("value") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-seasonsubplot}
+\caption{ }
+\label{fig:seasonsubplot}
+\setfloatalignment{b}
+\end{marginfigure}
+
+There is a slight rise from January to August and a subsequent fall, but the yearly variation is much more important.
+
+\vspace*{8\baselineskip}
+
+\section{Scatterplots}
+
+\newthought{Facets}
+
+<<label=scatterplot, fig=TRUE, include=FALSE, echo=FALSE>>=
+autoplot(gas_price_ts[,2:4], facets = TRUE) +
+  ggtitle("Gasoline price in Nairobi (top) and Brent Crude Oil (bottom) (dollar/l)") +
+  xlab("month") +
+  ylab("value") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-scatterplot}
+\caption{ }
+\label{fig:scatterplot}
+\setfloatalignment{b}
+\end{marginfigure}
+
+\vspace*{8\baselineskip}
+
+\newthought{Correlation}
+
+<<label=correlation, fig=TRUE, include=FALSE, echo=FALSE>>=
+gas_price_ts[,2:4] %>% as.data.frame %>% GGally::ggpairs()
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-correlation}
+\caption{ }
+\label{fig:correlation}
+\setfloatalignment{b}
+\end{marginfigure}
+
+A high correlation between the price of gasoline in Nairobi (in dollar/l, so taking into account the exchange rate) and Brent Crude Oil (in dollar/l)
+
+\vspace*{10\baselineskip}
+
+\section{Lag plots}
+
+<<label=lagplot, fig=TRUE, include=FALSE, echo=FALSE>>=
+gglagplot(gas_price_ts[,2]) +
+  ggtitle("Lag plot of gasoline price in Nairobi (top) (KSH/l)") +
+  xlab("lag") +
+  ylab("value") +
+  JT.theme
+@
+
+\begin{marginfigure}
+\includegraphics[width=1\textwidth]{FPP2-lagplot}
+\caption{ }
+\label{fig:lagplot}
+\setfloatalignment{b}
+\end{marginfigure}
+
+There is a lot of correlation with lag1 for all months. However, there is e.g. no correlation with lag12 or any other multiple, suggesting that there is no seasonality involved.
+
+\section{Autocorrelation}
+
+<<label=autocorrelation, fig=TRUE, include=FALSE, echo=FALSE>>=
+p1 <- ggAcf(gas_price_ts[,2], lag = 10) +
+  ggtitle("Autocorrelation plot\nof gasoline price in\nNairobi (KSH/l)") +
+  xlab("lag") +
+  ylab("ACF") +
+  JT.theme
+p2 <- ggPacf(gas_price_ts[,2], lag = 10) +
+  ggtitle("Partial Autocorrelation plot\nof gasoline price in\nNairobi (KSH/l)") +
+  xlab("lag") +
+  ylab("PACF") +
+  JT.theme
+grid.arrange(p1, p2, nrow = 1)
+@
+
+\begin{figure}
+\includegraphics[width=1\textwidth]{FPP2-autocorrelation}
+\caption{ }
+\label{fig:autocorrelation}
+\setfloatalignment{b}
+\end{figure}
+
+A slowly decaying autocorrelation picture on the left.Practically all the autocorrelation is linked with lag1 (right)
+
+\section{White noise}
+
+\section{Exercises}
+
+\section{Further reading}
+
+\chapter{The forecaster's toolbox}
+
+Forecasting horizon = h = 10 (in this example)
+
+<<>>=
+h <- 10
+@
+
+\section{Some simple forecasting methods}
+
+\subsection{Average method}
+
+Forecast value = mean of time series
+
+<<>>=
+meanf(gas_price_ts[,2], h = h)
+@
+
+\subsection{Na\"{i}ve method = random walk forecast}
+
+Forecast value = value of the last observation.
+The na\"{i}ve method is optimal when the data follow a random walk.
+
+<<>>=
+naive(gas_price_ts[,2], h =  h)
+@
+
+\subsection{Seasonal na\"{i}ve method}
+
+Forecasted value is equal to the observed value one period back in time.
+In this example this will not be a good method because we have seen that the seasonality is doubtful.
+
+<<>>=
+snaive(gas_price_ts[,2], h = h)
+@
+
+\subsection{Drift method}
+
+The \emph{drift} is the slope of the line between the first and the last observation. The forcast starts na\"{i}ve and then increases with this slope.
+
+<<>>=
+rwf(gas_price_ts[,2], h = h, drift = TRUE)
+@
+
+Figure~\ref{fig:simplemethods} shows the different forecasts:
+
+<<label=simplemethods, fig=TRUE, include=FALSE, echo=FALSE>>=
+autoplot(gas_price_ts[,2]) +
+  autolayer(meanf(gas_price_ts[,2], h = h),
+            series = "Average", PI = FALSE) +
+  autolayer(naive(gas_price_ts[,2], h = h),
+            series = "Naive", PI = FALSE) +
+  autolayer(snaive(gas_price_ts[,2], h = h),
+            series = "Seasonal naive", PI = FALSE) +
+  autolayer(rwf(gas_price_ts[,2], h = h, drift = TRUE),
+            series = "Drift", PI = FALSE) +
+  ggtitle("Results of simple forecast methods") +
+  xlab("Date") +
+  ylab("KSG per liter") +
+  guides(color = guide_legend(title = "Forecast"))
+@
+
+\begin{figure*}
+\includegraphics*[width=1\textwidth]{FPP2-simplemethods}
+\caption{ }
+\label{fig:simplemethods}
+\setfloatalignment{b}
+\end{figure*}
+
+The na\"{i}ve method seems to be the most logical in this case.
+
+\section{Transformations and adjustments}
+
+\subsection{Calendar adjustments}
+
+When working with values that represent a total count during a period (e.g. a month), but the periods have different lengths (months can have 28, 29, 30 or 31 days), it is better to work with a transformed value: the total cout in a period devided by the length of the period. The clever R-function to work with is \textit{monthdays}.
+
+<<>>=
+head(monthdays(gas_price_ts[,2]))
+@
+
+\subsection{Population adjustments}
+
+Idem for count variables for regions with different population: work with the value devided by the populace (per capita).
+
+\subsection{Inflation adjustments}
+
+Work with a price index: a reference year gets value 100. For other years the relative value is adjusted with the inflation. A common price index is the Consumer Price Index (CPI).
+
+\subsection{Mathematical transformation}
+
+In order to get rid of changing variation in the dataset a \emph{logaritmic} transformation can be useful. This will not work if there are negative values in the data set. 
+
+The logaritmic transformation is a special case of the \emph{Box-Cox}-transformations:
+
+\begin{equation}
+	w_{t}=ln(y_{t}) \quad if \quad \lambda=0 \quad else \quad \frac{(y_{t}^{\lambda}-1)}{\lambda}
+\end{equation}
+
+A good value of $\lambda$ is one which makes the size of the seasonal variation about the same across the whole series. The function \textit{BoxCox.lambda} will choose the optimal value for $\lambda$.
+
+Not useful here.
+
+
+
+\printindex
+
+\newpage
+
+\textbf{Thanks} \\
+\medskip
+R Core Team (2018). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. URL https://www.R-project.org/.
+\medskip
+<<>>=
+sessionInfo()
+@
+
+\end{document}
